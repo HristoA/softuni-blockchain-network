@@ -12,13 +12,14 @@ module.exports = function(app, Node) {
      */
     app.get('/blocks/:index', function(req, res) {
         index = req.params['index'];
-        const block = Node.blockchain.find(function(block){ return block.index == index.toString() ||  block.hash == index });
+        const block = Node.blockchain.find(function(block){ return block.index == index ||  block.hash == index });
         res.setHeader('Content-Type', 'application/json');
 
         if(block){
             res.status(200).json(block)
         }else{
             res.status(404)
+            res.send({"error" : "Not Found"})
             res.end()
         }
     })
