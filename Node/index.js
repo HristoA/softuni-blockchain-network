@@ -19,13 +19,15 @@ var MessageType     = {
 
 class Node {
     constructor(setBlockchainId){
+        this.genesisTimestamp = 1514764800000; //new Date().getTime();
         this.blockchain = [];
         this.folder     = 'data';
         this.blockchain = [];
         this.sockets    = [];
-        this.difficulty = 1;//Start difficulty of network
+        this.difficulty = 2;//Start difficulty of network
         this.blockReward= 24; //Reward coin for miners
-        this.minersJobs = []; //Hold all miners address and him jobs
+        this.targtBlockTime = 1000; //Used for simple automatic difficulty adjustmnt
+        this.minersJobs     = []; //Hold all miners address and him jobs
         this.pendingTransactions = [];
         this.setBlockchainId(setBlockchainId);//@TODO: Implement saving of blockchain and Peers list to file system
 
@@ -94,16 +96,14 @@ Node.prototype.initConnection = function(ws){
 
         switch (message.type) {
             case MessageType.QUERY_LATEST:
-                ws.send(
-                    JSON.stringify({
-                        'type': MessageType.RESPONSE_BLOCKCHAIN,
-                        'data': JSON.stringify($this.getLatestBlock())
-                    })
-                );
+                ws.send( JSON.stringify($this.responseLatestMsg()) );
                 break;
             case MessageType.QUERY_ALL:
                 ws.send(
-                    JSON.stringify({'type': MessageType.QUERY_LATEST})
+                    JSON.stringify({
+                        'type': MessageType.RESPONSE_BLOCKCHAIN,
+                        'data': JSON.stringify($this.blockchain)
+                    })
                 );
                 break;
             case MessageType.RESPONSE_BLOCKCHAIN:
@@ -144,7 +144,7 @@ Node.prototype.setBlockchainId = function(blockchainId){
 };
 
 Node.prototype.handleBlockchainResponse = function(message){
-    var receivedBlocks      = [JSON.parse(message.data)].sort(function(b1, b2){ (b1.index - b2.index) });
+    var receivedBlocks      = JSON.parse(message.data).sort(function(b1, b2){ return (b1.index - b2.index) });
     var latestBlockReceived = receivedBlocks[receivedBlocks.length - 1];
     var latestBlockHeld     = this.getLatestBlock();
 
@@ -161,7 +161,8 @@ Node.prototype.handleBlockchainResponse = function(message){
         } else {
             this.console('handleBlockchainResponse', "Received blockchain is longer than current blockchain");
 
-            if (this.isValidChain(receivedBlocks) && receivedBlocks.length > blockchain.length) {
+            //Verify block by length
+            if (this.isValidChain(receivedBlocks) && receivedBlocks.length > this.blockchain.length) {
                 this.console('handleBlockchainResponse', 'Received blockchain is valid. Replacing current blockchain with received blockchain');
                 this.blockchain = receivedBlocks;
                 this.broadcast(this.responseLatestMsg());
@@ -169,10 +170,6 @@ Node.prototype.handleBlockchainResponse = function(message){
                 this.console('handleBlockchainResponse', 'Received blockchain invalid');
             }
         }
-    //Replace genesis block only in peers nodes not i master one
-    }else if(latestBlockHeld.index == 0 && initialPeers.length != 0) {
-        this.console('handleBlockchainResponse', 'Received blockchain is genesis and is valid. Replacing current blockchain with received blockchain');
-        this.blockchain = receivedBlocks;
     } else {
         this.console('handleBlockchainResponse', 'received blockchain is not longer than current blockchain. Do nothing');
     }
@@ -208,15 +205,24 @@ Node.prototype.isValidChain = function(blockchainToValidate){
  * @returns {boolean}
  */
 Node.prototype.isValidNewBlock = function(newBlock, previousBlock){
+
+    var newBlockIndex = newBlock.index;
+    var previousHash  = newBlock.previousHash;
+    var timestamp     = newBlock.timestamp;
+    var transactions  = newBlock.transactions;
+    var blockDataHash = this.calculateSHA256({newBlockIndex, previousHash, timestamp, transactions});
+
+    var nonce         = newBlock.nonce
+    var newBlockHash  = this.calculateSHA256({blockDataHash, nonce});
+
     if (previousBlock.index + 1 !== newBlock.index) {
         this.console('isValidNewBlock', 'invalid index');
         return false;
     } else if (previousBlock.hash !== newBlock.previousHash) {
         this.console('isValidNewBlock', 'invalid previous hash');
         return false;
-    } else if (this.calculateHashForBlock(newBlock) !== newBlock.hash) {
-        this.console('isValidNewBlock', typeof (newBlock.hash) + ' ' + typeof this.calculateHashForBlock(newBlock));
-        this.console('isValidNewBlock', 'invalid hash: ' + this.calculateHashForBlock(newBlock) + ' ' + newBlock.hash);
+    } else if (newBlockHash !== newBlock.hash) {
+        this.console('isValidNewBlock', 'invalid hash: ' + newBlockHash + ' ' + newBlock.hash);
         return false;
     }
     return true;
@@ -238,11 +244,17 @@ Node.prototype.getMiningJob = function(address){
     )
     {
         var response = this.minersJobs[address];
-        delete response.transactions;
 
         return {
             "status" : "old",
-            "data" : this.minersJobs[address]
+            "data" : {
+                "index"         : response.index,
+                "transCounter"  : response.transCounter,
+                "difficulty"    : response.difficulty,
+                "prevBlockHash" : response.prevBlockHash,
+                "blockDataHash" : response.blockDataHash,
+                "reward"        : response.blockReward
+            }
         }
     }
 
@@ -277,33 +289,38 @@ Node.prototype.getMiningJob = function(address){
 
     var prevBlockHash = this.calculateHashForBlock(this.getLatestBlock());
     var difficulty    = this.difficulty;
-    var blockDataHash = this.calculateSHA256({newBlockIndex, jobTrans, difficulty, prevBlockHash, address});
+    var blockDataHash = this.calculateSHA256({newBlockIndex, prevBlockHash, now, jobTrans});
 
     this.minersJobs[address] = {
         "index"         : newBlockIndex, //Index of new block that are mined right now
         "transactions"  : jobTrans, // All the time will have transCounter + 1 here
         "transCounter"  : this.pendingTransactions.length, //Will be used from miner how many trans process and when to want new
         "difficulty"    : this.difficulty,
+        "timestamp"     : now,
         "prevBlockHash" : prevBlockHash,
         "blockDataHash" : blockDataHash,
         "reward"        : blockReward
     };
 
-    var response = this.minersJobs[address];
-    delete response.transactions;
-
     return {
         "status" : "new",
-        "data" : this.minersJobs[address]
+        "data" : {
+            "index"         : newBlockIndex, //Index of new block that are mined right now
+            "transCounter"  : this.pendingTransactions.length, //Will be used from miner how many trans process and when to want new
+            "difficulty"    : this.difficulty,
+            "prevBlockHash" : prevBlockHash,
+            "blockDataHash" : blockDataHash,
+            "reward"        : blockReward
+        }
     }
 }
 
 
-Node.prototype.submitBlock = function(nonce, timestamp, newBlockHash, minnerAddr){
+Node.prototype.submitBlock = function(nonce, newBlockHash, minnerAddr){
 
-    var job               = this.miningJobs[minnerAddr];
+    var job               = this.minersJobs[minnerAddr];
     var blockDataHash     = job.blockDataHash;
-    var blockHashForCheck = this.calculateSHA256({blockDataHash, nonce});
+    var verifyNonce       = this.calculateSHA256({blockDataHash, nonce});
 
     var blockStart        = newBlockHash.substr(0, job.difficulty);
     var validStartOfHash  = '0'.repeat(job.difficulty);
@@ -314,14 +331,14 @@ Node.prototype.submitBlock = function(nonce, timestamp, newBlockHash, minnerAddr
      * - Index of new block is correct
      */
     if(
-        blockHashForCheck == blockDataHash
+        newBlockHash == verifyNonce
         && blockStart == validStartOfHash
         && job.index == (this.getLatestBlock().index + 1)
     ){
         var newBlock = {
             "index"         : job.index,
-            "previousHash"  : job.prevBlockHash,
-            "timestamp"     : timestamp,
+            "previousHash"  : this.getLatestBlock().hash,
+            "timestamp"     : job.timestamp,
             "transactions"  : job.transactions,
             "hash"          : newBlockHash,
             "mynedBy"       : minnerAddr,
@@ -329,7 +346,7 @@ Node.prototype.submitBlock = function(nonce, timestamp, newBlockHash, minnerAddr
             "nonce"         : nonce,
         }
 
-        newBlock.transactions.forEach(function(i, item){
+        newBlock.transactions.forEach(function(item, i){
             newBlock.transactions[i].block  = newBlock.index;
             newBlock.transactions[i].status = "confirmed";
         });
@@ -343,6 +360,11 @@ Node.prototype.submitBlock = function(nonce, timestamp, newBlockHash, minnerAddr
             }
         });
 
+        /**
+         * Simple adjustment of difficulty
+         */
+        this.adjustDifficulty(newBlock.timestamp, this.getLatestBlock().timestamp);
+
         this.blockchain.push(newBlock);
 
         this.broadcast(this.responseLatestMsg());
@@ -353,6 +375,16 @@ Node.prototype.submitBlock = function(nonce, timestamp, newBlockHash, minnerAddr
     return false;
 }
 
+Node.prototype.adjustDifficulty = function(now, old){
+    if( (now - old) < this.targtBlockTime ){
+        this.difficulty++;
+        this.console("DIFFICULTY", "Adjust to: " + this.difficulty)
+    } else {
+        this.difficulty--;
+        this.console("DIFFICULTY", "Adjust to: " + this.difficulty)
+    }
+}
+
 /**
  * Send last block that are available in blockchain
  * @returns {{type: number, data: string}}
@@ -360,7 +392,7 @@ Node.prototype.submitBlock = function(nonce, timestamp, newBlockHash, minnerAddr
 Node.prototype.responseLatestMsg = function(){
     return {
         'type': MessageType.RESPONSE_BLOCKCHAIN,
-        'data': JSON.stringify(this.getLatestBlock())
+        'data': JSON.stringify([this.getLatestBlock()])
     };
 };
 
@@ -387,7 +419,7 @@ Node.prototype.getLatestBlock = function(){
  * @param block
  */
 Node.prototype.calculateHashForBlock = function(block){
-    return CryptoJS.SHA256(block.index + block.previousHash + block.timestamp + JSON.stringify(block.transactions) +  block.hash +  block.difficulty +  block.nonce).toString();
+    return CryptoJS.SHA256(block.index + block.previousHash + block.timestamp, + JSON.stringify(block.transactions) ).toString();
 };
 
 Node.prototype.calculateSHA256 = function(object){
@@ -420,36 +452,44 @@ Node.prototype.recursiveRoutes = function(folderName, app) {
  * Genesis block
  */
 Node.prototype.getGenesisBlock = function(){
-    var now = new Date().getTime();
     var transactionHash = this.calculateSHA256([
         "genesis",
         "genesis",
         69,
         0,
-        now,
+        this.genesisTimestamp,
         "genesis",
         "genesis",
     ]);
+    var genesisTransactions = [{
+        "from"  : "genesis",
+        "to"    : "genesis",
+        "value" : 69,
+        "fee"   : 0,
+        "timestamp" : this.genesisTimestamp,
+        "pubKey"    : "genesis",
+        "signature" : "genesis",
+        "hash"      : transactionHash,
+        "block"     : 0,
+        "status"    : "confirmed"
+    }];
+
+    var hash = this.calculateHashForBlock({
+        "index"         : 0,
+        "previousHash"  : 0,
+        "timestamp"     : this.genesisTimestamp,
+        "transactions"  : JSON.stringify(genesisTransactions),
+        "nonce"         : 0
+    });
 
     return {
         "index"         : 0, //Index of block
-        "previousHash"  : "0", //Previous Hash
-        "timestamp"     : now, //Timestamp
-        "transactions"  : [{
-            "from"  : "genesis",
-            "to"    : "genesis",
-            "value" : 69,
-            "fee"   : 0,
-            "timestamp" : now,
-            "pubKey"    : "genesis",
-            "signature" : "genesis",
-            "hash"      : transactionHash,
-            "block"     : 0,
-            "status"    : "confirmed"
-        }], //Transactions
-        "hash"          : "aad1596846d2dda1591d92216029eb068c79c4a25f6d0a1ef37739d4af4cb3df", //Hash of current block: index, transactions, difficulty, prevBlockHash, mynedBy
+        "previousHash"  : 0, //Previous Hash
+        "timestamp"     : this.genesisTimestamp, //Timestamp
+        "transactions"  : genesisTransactions, //Transactions
+        "hash"          : hash,
         "mynedBy"       : "genesis",
-        "difficulty"    : 0, //Difficulty
+        "difficulty"    : this.difficulty , //Difficulty
         "nonce"         : 0 //Nonce
     }
 };

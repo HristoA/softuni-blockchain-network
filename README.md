@@ -43,4 +43,5 @@ HTTP_PORT=3002 P2P_PORT=6002 PEERS=ws://localhost:6001 npm test
 |/transaction/:hash | GET | Returns transaction info for specific transaction hash |
 | /transactions/pending | GET | Returns all pending transactions |
 | /balance/:addr | GET | Returns balances and transaction history for address |  
-| /mining/:addr | GET | Return
+| /mining/:addr | GET | Return data for miners |
+| /mining/:addr | POST | Send new mined block |

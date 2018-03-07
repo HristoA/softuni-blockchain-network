@@ -1,0 +1,17 @@
+{
+  "name": "blockchain-miner",
+  "version": "1.0.0",
+  "description": "PoW miner for blockchain network",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "DEBUG=* node index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "crypto-js": "^3.1.9-1",
+    "debug": "^3.1.0",
+    "request": "^2.83.0"
+  }
+}

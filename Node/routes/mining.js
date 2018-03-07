@@ -14,12 +14,12 @@ module.exports = function(app, Node) {
         res.setHeader('Content-Type', 'application/json');
 
         const minerAddr = req.params['addr'];
-        const status    = Node.submitBlock(req.body.nonce, req.body.timestamp, req.body.blockHash, minerAddr);
+        const status    = Node.submitBlock(req.body.nonce, req.body.blockHash, minerAddr);
 
         if(status) {
             res.status(200).json({
                 "status"    : "accepted",
-                "message"   : "Block accepted. You get: " + Node.miningJobs[minerAddr].expectedReward + "coins."
+                "message"   : "Block accepted. You get: " + Node.minersJobs[minerAddr].reward + " coins."
             })
         } else {
             res.status(400).json({"message": "error"})
