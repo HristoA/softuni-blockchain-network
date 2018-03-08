@@ -17,16 +17,11 @@ module.exports = function(app, Node) {
     })
 
     /**
-     * Return transaction info by hash of transaction
+     * Return pending transactions
      */
     app.get('/transactions/pending', function(req, res) {
-        res.setHeader('Content-Type', 'application/json');
-        res.status(200).json({
-            "count" : Node.pendingTransactions.length,
-            "transactions" : Node.pendingTransactions,
-        })
+            res.status(200).json(Node.pendingTransactions)
     })
-
     /**
      * Make transaction
      */
@@ -40,36 +35,71 @@ module.exports = function(app, Node) {
         var timestamp   = req.body.timestamp;
         var pubKey      = req.body.pubKey;
         var signature   = req.body.signature;
+        var hash        = req.body.hash;
 
-        var transactionHash = Node.calculateSHA256({from, to, value, fee, timestamp, pubKey, signature});
+        var receivedTransHash = Node.calculateSHA256([from, to, value, fee, timestamp]);
 
-        //Check for doblicates transaction
-        const transactionExist = Node.pendingTransactions.find(function(transaction){ return transaction.hash == transactionHash });
-
-        if(transactionExist) {
+        /**
+         * Verify transaction
+         * - Transaction hash that is received is the same as calculated one of bock
+         * -
+         */
+        if( receivedTransHash != hash || !Node.isValidSignature(hash, signature, pubKey) ){
             res.status(409)//Conflict with server logic
-            res.send({"error" : "The same transaction already exist"})
+            res.send({
+                "error"             : "Transaction verification fail",
+                "receivedTransHash" : receivedTransHash,
+                "hash"              : hash,
+                "signature"         : signature,
+                "pubKey"            : pubKey
+            })
             res.end()
         } else {
-            //Add to pending transaction that will be included in next block
-            Node.pendingTransactions.push({
-                "from"  : from,
-                "to"    : to,
-                "value" : value,
-                "fee"   : fee,
-                "timestamp" : timestamp,
-                "pubKey"    : pubKey,
-                "signature" : signature,
-                "hash"      : transactionHash,
-                "block"     : "undefined",
-                "status"    : "pending",
-            })
+            //Check for duplicates transaction
+            const transactionExist = Node.pendingTransactions.find(function (transaction) {
+                return transaction.hash == receivedTransHash
+            });
 
-            res.status(201).json({
-                "message"   : "success",
-                "hash"      : transactionHash
-            })
-            res.end()
+            if (transactionExist) {
+                res.status(409)//Conflict with server logic
+                res.send({
+                    "status" : "error",
+                    "message": "The same transaction already exist"
+                })
+                res.end()
+            } else {
+                var balanceData = Node.getBalance(from);
+
+                //Verify that sender have the money in balance
+                if(balanceData.balance < value){
+                    res.status(409)//Conflict with server logic
+                    res.send({
+                        "status" : "error",
+                        "message": "You only have: " + balanceData.balance + " and try to send: " + value + " coins!"
+                    })
+                    res.end()
+                } else {
+                    //Add to pending transaction that will be included in next block
+                    Node.pendingTransactions.push({
+                        "from"      : from,
+                        "to"        : to,
+                        "value"     : value,
+                        "fee"       : fee,
+                        "timestamp" : timestamp,
+                        "pubKey"    : pubKey,
+                        "signature" : signature,
+                        "hash"      : hash,
+                        "block"     : "undefined",
+                        "status"    : "pending",
+                    })
+
+                    res.status(201).json({
+                        "status"  : "success",
+                        "message" : "Successful create transaction with hash: " + hash,
+                    })
+                    res.end()
+                }
+            }
         }
     })
 }

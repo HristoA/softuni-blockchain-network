@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>{% if isFaucet == "true" %} Faucet {% else %} Wallet {% endif %}</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="icon" type="image/png" href="images/icons/favicon.ico"/>
+	<link rel="stylesheet" type="text/css" href="vendor/bootstrap/css/bootstrap.min.css">
+	<link rel="stylesheet" type="text/css" href="fonts/font-awesome-4.7.0/css/font-awesome.min.css">
+	<link rel="stylesheet" type="text/css" href="fonts/Linearicons-Free-v1.0.0/icon-font.min.css">
+	<link rel="stylesheet" type="text/css" href="vendor/animate/animate.css">
+	<link rel="stylesheet" type="text/css" href="vendor/css-hamburgers/hamburgers.min.css">
+	<link rel="stylesheet" type="text/css" href="vendor/animsition/css/animsition.min.css">
+	<link rel="stylesheet" type="text/css" href="vendor/select2/select2.min.css">
+	<link rel="stylesheet" type="text/css" href="vendor/daterangepicker/daterangepicker.css">
+	<link rel="stylesheet" type="text/css" href="css/util.css">
+	<link rel="stylesheet" type="text/css" href="css/main.css">
+</head>
+<body>
+	<div class="container-contact100">
+		<div class="col-md-10">
+            <h3 id="message" class="text-warning"></h3>
+
+            <div class="clearfix"></div>
+
+			<form class="contact100-form validate-form">
+	            <span>
+					{% if isFaucet == "true" %} Faucet wallet: {% else %} Wallet of: {% endif %}
+				</span>
+                <span class="contact100-form-title word-wrap">
+                    {{ address }}
+                </span>
+
+                <span>
+					Balance:
+				</span>
+                <span class="contact100-form-title word-wrap">
+                    {{ balance }}
+                </span>
+
+                <span>
+					Pending Balance:
+				</span>
+                <span class="contact100-form-title word-wrap">
+                    {{ pendingBalance }}
+                </span>
+
+
+                <span>
+                    Send:
+                </span>
+
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="wrap-input100 validate-input" data-validate="Address is required">
+                            <input class="input100" id="address" type="text" name="address" placeholder="Address" required>
+                            <label class="label-input100" for="address">
+                                <span class="lnr lnr-user"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="wrap-input100 validate-input" data-validate="Value is required">
+                            <input class="input100" id="value" type="number" name="value" placeholder="Value" required>
+                            <label class="label-input100" for="value">
+                                <span class="lnr lnr-diamond"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="container-contact100-form-btn" style="padding-top: 0px;!important">
+                            <div class="wrap-contact100-form-btn">
+                                <div class="contact100-form-bgbtn"></div>
+                                <button class="contact100-form-btn">
+                                    Send
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+			</form>
+
+            <div class="clearfix"></div>
+
+			<span>
+                Transactions:
+            </span>
+
+            {% for item in transactions%}
+                <div class="col-md-9 wrap-input100">
+                    <div class="row wrap-input100">
+                        <div class="col-md-1">
+                            <span>From:</span>
+                        </div>
+                        <div class="col-md-11">
+                             {{ item.from }}
+                        </div>
+
+
+                        <div class="col-md-1">
+                            <span>To:</span>
+                        </div>
+                        <div class="col-md-11">
+                             {{ item.to }}
+                        </div>
+
+                        <div class="col-md-1">
+                            <span>Value:</span>
+                        </div>
+                        <div class="col-md-11">
+                             {{ item.value }}
+                        </div>
+                        <div class="col-md-1">
+                            <span>Timestamp:</span>
+                        </div>
+                        <div class="col-md-11">
+                            {{ item.timestamp|date('Y-m-d H:i:s') }} (  {{ item.timestamp }})
+                        </div>
+                         <div class="col-md-1">
+                            <span>Hash:</span>
+                        </div>
+                        <div class="col-md-11">
+                            {{ item.hash }}
+                        </div>
+
+                        <div class="col-md-1">
+                            <span>Block:</span>
+                        </div>
+                        <div class="col-md-11">
+                            {{ item.block }}
+                        </div>
+
+                    </div>
+                </div>
+            {% endfor %}
+
+		</div>
+	</div>
+
+
+
+	<div id="dropDownSelect1"></div>
+
+	<script src="vendor/jquery/jquery-3.2.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/jquery.validation/1.16.0/jquery.validate.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/jquery.validation/1.16.0/additional-methods.min.js"></script>
+	<script src="vendor/animsition/js/animsition.min.js"></script>
+	<script src="vendor/bootstrap/js/popper.js"></script>
+	<script src="vendor/bootstrap/js/bootstrap.min.js"></script>
+	<script src="vendor/select2/select2.min.js"></script>
+	<script src="vendor/daterangepicker/moment.min.js"></script>
+	<script src="vendor/daterangepicker/daterangepicker.js"></script>
+	<script src="vendor/countdowntime/countdowntime.js"></script>
+	<script src="js/main.js"></script>
+</body>
+</html>

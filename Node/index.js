@@ -6,11 +6,14 @@ var bodyParser  = require('body-parser');
 var WebSocket   = require("ws");
 var fs          = require('fs');
 var path        = require('path');
+var ec          = require('elliptic').ec;
 var debug       = require('debug');
+
 
 var httpPort        = process.env.HTTP_PORT || 3001;
 var p2pPort         = process.env.P2P_PORT  || 6001;
 var initialPeers    = process.env.PEERS ? process.env.PEERS.split(',') : [];
+var EC              = ec('secp256k1');
 var MessageType     = {
     QUERY_LATEST: 0,
     QUERY_ALL: 1,
@@ -25,9 +28,11 @@ class Node {
         this.blockchain = [];
         this.sockets    = [];
         this.difficulty = 2;//Start difficulty of network
+        this.minDifficulty = 2;//Minimum network difficulty
         this.blockReward= 24; //Reward coin for miners
-        this.targtBlockTime = 1000; //Used for simple automatic difficulty adjustmnt
-        this.minersJobs     = []; //Hold all miners address and him jobs
+        this.targtBlockTime      = 10000; //Used for simple automatic difficulty adjustment
+        this.adjustCheckInterval = 1000; //Every 1 seconds will check difficulty and adjust if need
+        this.minersJobs          = []; //Hold all miners address and him jobs
         this.pendingTransactions = [];
         this.setBlockchainId(setBlockchainId);//@TODO: Implement saving of blockchain and Peers list to file system
 
@@ -40,6 +45,7 @@ class Node {
         this.connectToPeers(initialPeers);
         this.initP2P();
         this.initHttpServer();
+        this.adjustDifficulty();
     }
 }
 
@@ -210,10 +216,10 @@ Node.prototype.isValidNewBlock = function(newBlock, previousBlock){
     var previousHash  = newBlock.previousHash;
     var timestamp     = newBlock.timestamp;
     var transactions  = newBlock.transactions;
-    var blockDataHash = this.calculateSHA256({newBlockIndex, previousHash, timestamp, transactions});
+    var blockDataHash = this.calculateSHA256([newBlockIndex, previousHash, timestamp, transactions]);
 
     var nonce         = newBlock.nonce
-    var newBlockHash  = this.calculateSHA256({blockDataHash, nonce});
+    var newBlockHash  = this.calculateSHA256([blockDataHash, nonce]);
 
     if (previousBlock.index + 1 !== newBlock.index) {
         this.console('isValidNewBlock', 'invalid index');
@@ -239,8 +245,9 @@ Node.prototype.getMiningJob = function(address){
      */
     if(
         typeof this.minersJobs[address] != "undefined"
-        && this.pendingTransactions.length == this.minersJobs[address].transCounter
+        && this.minersJobs[address].transCounter == this.pendingTransactions.length
         && (this.minersJobs[address].index -1) == this.getLatestBlock().index
+        && this.minersJobs[address].oldDifficulty == this.minersJobs[address].difficulty
     )
     {
         var response = this.minersJobs[address];
@@ -268,16 +275,14 @@ Node.prototype.getMiningJob = function(address){
         address,
         blockReward,
         0,
-        now,
-        "network",
-        "network",
+        now
     ]);
 
      jobTrans.unshift({
-        "from"  : "network",
-        "to"    : address,
-        "value" : blockReward,
-        "fee"   : 0,
+        "from"      : "network",
+        "to"        : address,
+        "value"     : blockReward,
+        "fee"       : 0,
         "timestamp" : now,
         "pubKey"    : "network",
         "signature" : "network",
@@ -285,17 +290,17 @@ Node.prototype.getMiningJob = function(address){
         "block"     : newBlockIndex,
         "status"    : "confirmed"
     })
-    this.pendingTransactions = this.pendingTransactions.filter(function(item){ item.status == 'pending'});
+    this.pendingTransactions = this.pendingTransactions.filter(function(item){ return item.status == 'pending'});
 
     var prevBlockHash = this.calculateHashForBlock(this.getLatestBlock());
-    var difficulty    = this.difficulty;
-    var blockDataHash = this.calculateSHA256({newBlockIndex, prevBlockHash, now, jobTrans});
+    var blockDataHash = this.calculateSHA256([newBlockIndex, prevBlockHash, now, jobTrans]);
 
     this.minersJobs[address] = {
         "index"         : newBlockIndex, //Index of new block that are mined right now
         "transactions"  : jobTrans, // All the time will have transCounter + 1 here
         "transCounter"  : this.pendingTransactions.length, //Will be used from miner how many trans process and when to want new
         "difficulty"    : this.difficulty,
+        "oldDifficulty" : this.difficulty,
         "timestamp"     : now,
         "prevBlockHash" : prevBlockHash,
         "blockDataHash" : blockDataHash,
@@ -320,7 +325,7 @@ Node.prototype.submitBlock = function(nonce, newBlockHash, minnerAddr){
 
     var job               = this.minersJobs[minnerAddr];
     var blockDataHash     = job.blockDataHash;
-    var verifyNonce       = this.calculateSHA256({blockDataHash, nonce});
+    var verifyNonce       = this.calculateSHA256([blockDataHash, nonce]);
 
     var blockStart        = newBlockHash.substr(0, job.difficulty);
     var validStartOfHash  = '0'.repeat(job.difficulty);
@@ -360,11 +365,6 @@ Node.prototype.submitBlock = function(nonce, newBlockHash, minnerAddr){
             }
         });
 
-        /**
-         * Simple adjustment of difficulty
-         */
-        this.adjustDifficulty(newBlock.timestamp, this.getLatestBlock().timestamp);
-
         this.blockchain.push(newBlock);
 
         this.broadcast(this.responseLatestMsg());
@@ -375,14 +375,80 @@ Node.prototype.submitBlock = function(nonce, newBlockHash, minnerAddr){
     return false;
 }
 
-Node.prototype.adjustDifficulty = function(now, old){
-    if( (now - old) < this.targtBlockTime ){
+
+Node.prototype.getBalance = function(address){
+    var $this= this;
+
+    this.console("getBalance", "Get balance for: " + address)
+
+    var response = {
+        "address"         : address,
+        "balance"         : 0,//Balance of address
+        "pendingBalance"  : 0,
+        "addrTransaction" : []//all transaction for address
+    }
+
+    this.blockchain.forEach( function(block){
+        block.transactions.forEach(function(transaction){
+            if(transaction.from == address || transaction.to == address) {
+                response.addrTransaction.push(transaction);
+
+                if(transaction.from == address){
+                    response.balance -= parseInt(transaction.value);
+                } else {
+                    response.balance += parseInt(transaction.value);
+                }
+            }
+        })
+    });
+
+    this.pendingTransactions.forEach( function(transaction){
+
+        if(transaction.from == address){
+            response.pendingBalance -= parseInt(transaction.value);
+        } else {
+            response.pendingBalance += parseInt(transaction.value);
+        }
+    });
+
+    return response;
+}
+
+Node.prototype.adjustDifficulty = function(lastCheckBlockIndex){
+    var $this     = this;
+    var now       = new Date().getTime();
+    var lastBlock = this.getLatestBlock();
+
+    if(typeof lastCheckBlockIndex == "undefined"){
+        var lastCheckBlockIndex = 0
+    }
+
+    if(
+        (now - lastBlock.timestamp) < this.targtBlockTime
+        && parseInt(lastCheckBlockIndex) < parseInt(lastBlock.index)
+    ){
         this.difficulty++;
+        lastCheckBlockIndex = lastBlock.index;
         this.console("DIFFICULTY", "Adjust to: " + this.difficulty)
-    } else {
+    } else if(
+        (now - lastBlock.timestamp) > this.targtBlockTime
+        && this.difficulty > this.minDifficulty
+        && parseInt(lastCheckBlockIndex) <= parseInt(lastBlock.index)
+    ){
         this.difficulty--;
+        lastCheckBlockIndex = lastBlock.index;
         this.console("DIFFICULTY", "Adjust to: " + this.difficulty)
     }
+
+    //Adjust difficulty for all miners
+    Object.keys(this.minersJobs).forEach(function(addr){
+        $this.minersJobs[addr].difficulty = $this.difficulty;
+    });
+
+
+    setTimeout(function(){
+        $this.adjustDifficulty(lastCheckBlockIndex);
+    }, this.adjustCheckInterval)
 }
 
 /**
@@ -493,6 +559,13 @@ Node.prototype.getGenesisBlock = function(){
         "nonce"         : 0 //Nonce
     }
 };
+
+
+Node.prototype.isValidSignature = function(hashString, signature, publicKey) {
+    var key = EC.keyFromPublic(publicKey, 'hex');
+
+    return key.verify(hashString, signature);
+}
 
 /**
  * Used to control and display debug information

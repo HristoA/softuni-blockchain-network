@@ -4,16 +4,10 @@ var CryptoJS  = require("crypto-js");
 var request   = require('request');
 var debug     = require('debug');
 
-var minerAddr = process.env.MINNER_ADDR || "default";
-var nodeUrl   = process.env.NO_URL || "http://localhost:3001";
-
-var syncInterval = null;
-var lastHashSpeedTiemstamp = null;
-
 class Miner {
     constructor(){
-        this.nodeUrl            = nodeUrl;
-        this.minerAddr          = minerAddr;
+        this.nodeURL            = process.env.NODE_URL || "http://localhost:3001";
+        this.minerAddr          = process.env.MINNER_ADDR || "default";
         this.syncInterval       = 1000;
         this.hashSpeedInterval  = 10000;
         this.mineInterval       = 10;
@@ -39,12 +33,12 @@ Miner.prototype.sync = function(loop = true){
     var $this = this;
 
     request({
-        uri: this.nodeUrl + '/mining/' + this.minerAddr ,
+        uri: this.nodeURL + '/mining/' + this.minerAddr ,
         method: "GET",
         json: true
     }, function(error, response, body) {
 
-        if (error && response.statusCode != 200) {
+        if (error) {
             $this.console("SYNC", "Node return error: " + error)
             return;
         }
@@ -52,6 +46,7 @@ Miner.prototype.sync = function(loop = true){
         //Reset nonce on new transaction in block
         if(body.status == "new"){
             $this.nonce = 0;
+            $this.console("SYNC", "New block hash for mining received with difficulty: " + body.data.difficulty);
         }
 
         $this.minerJob = body.data;
@@ -75,7 +70,7 @@ Miner.prototype.mine = function(){
         var blockDataHash     = $this.minerJob.blockDataHash;
         var nonce             = $this.nonce;
 
-        var blockHash         = this.calculateSHA256({blockDataHash, nonce});
+        var blockHash         = this.calculateSHA256([blockDataHash, nonce]);
         var blockStart        = blockHash.substr(0, $this.minerJob.difficulty);
         var validStartOfHash  = '0'.repeat($this.minerJob.difficulty);
 
@@ -104,7 +99,7 @@ Miner.prototype.hashSpeed = function(){
     var timeInterval = (now - this.lastHashesTimestamp) / 1000;
     var hashSpeed    = Math.round((this.hashesToNow - this.lastHashes) / timeInterval );
 
-    this.console("HASH_SPEED",  Math.round((this.hashesToNow - this.lastHashes) / timeInterval ) + " hash/s");
+    this.console("HASH_SPEED",  Math.round((this.hashesToNow - this.lastHashes) / timeInterval ) + " hash/s." + " Difficulty " + this.minerJob.difficulty);
 
     this.lastHashes          = this.hashesToNow
     this.lastHashesTimestamp = now
@@ -126,7 +121,7 @@ Miner.prototype.submitNewBlock = function(minerJob, newBlockHash, nonce){
     var $this = this;
 
     request({
-        uri: this.nodeUrl + '/mining/' + this.minerAddr ,
+        uri: this.nodeURL + '/mining/' + this.minerAddr ,
         method: "POST",
         json: {
             "blockHash": newBlockHash,

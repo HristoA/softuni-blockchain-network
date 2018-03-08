@@ -1,7 +1,7 @@
 {
-  "name": "blockchain-node",
+  "name": "blockciahn-wallet",
   "version": "1.0.0",
-  "description": "Node element from blockchain network",
+  "description": "Simple wallet with FE part that is connectiong to Node",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -16,7 +16,7 @@
     "elliptic": "^6.4.0",
     "express": "^4.16.2",
     "fs": "0.0.1-security",
-    "path": "^0.12.7",
-    "ws": "^4.1.0"
+    "request": "^2.83.0",
+    "swig": "^1.4.2"
   }
 }
