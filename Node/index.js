@@ -9,7 +9,6 @@ var path        = require('path');
 var ec          = require('elliptic').ec;
 var debug       = require('debug');
 
-
 var httpPort        = process.env.HTTP_PORT || 3001;
 var p2pPort         = process.env.P2P_PORT  || 6001;
 var initialPeers    = process.env.PEERS ? process.env.PEERS.split(',') : [];
@@ -23,17 +22,17 @@ var MessageType     = {
 class Node {
     constructor(setBlockchainId){
         this.genesisTimestamp = 1514764800000; //new Date().getTime();
-        this.blockchain = [];
-        this.folder     = 'data';
-        this.blockchain = [];
-        this.sockets    = [];
-        this.difficulty = 2;//Start difficulty of network
-        this.minDifficulty = 2;//Minimum network difficulty
-        this.blockReward= 24; //Reward coin for miners
-        this.targtBlockTime      = 10000; //Used for simple automatic difficulty adjustment
-        this.adjustCheckInterval = 1000; //Every 1 seconds will check difficulty and adjust if need
-        this.minersJobs          = []; //Hold all miners address and him jobs
-        this.pendingTransactions = [];
+        this.blockchain             = [];
+        this.folder                 = 'data';
+        this.blockchain             = [];
+        this.sockets                = [];
+        this.difficulty             = 2;//Start difficulty of network
+        this.minDifficulty          = 2;//Minimum network difficulty
+        this.blockReward            = 12; //Reward coin for miners
+        this.targtBlockTime         = 10000; //Used for simple automatic difficulty adjustment
+        this.adjustCheckInterval    = 1000; //Every 1 seconds will check difficulty and adjust if need
+        this.minersJobs             = []; //Hold all miners address and him jobs
+        this.pendingTransactions    = [];
         this.setBlockchainId(setBlockchainId);//@TODO: Implement saving of blockchain and Peers list to file system
 
         //Make Genesis block. @TODO: Make genesis block only in first run and read from file system after that
@@ -271,7 +270,7 @@ Node.prototype.getMiningJob = function(address){
     var jobTrans        = this.pendingTransactions;
     var now             = new Date().getTime();
     var transactionHash = this.calculateSHA256([
-        "network",
+        "coinbase",
         address,
         blockReward,
         0,
@@ -279,13 +278,13 @@ Node.prototype.getMiningJob = function(address){
     ]);
 
      jobTrans.unshift({
-        "from"      : "network",
+        "from"      : "coinbase",
         "to"        : address,
         "value"     : blockReward,
         "fee"       : 0,
         "timestamp" : now,
-        "pubKey"    : "network",
-        "signature" : "network",
+        "pubKey"    : "coinbase",
+        "signature" : "coinbase",
         "hash"      : transactionHash,
         "block"     : newBlockIndex,
         "status"    : "confirmed"

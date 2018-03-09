@@ -18,7 +18,7 @@
 </head>
 <body>
 	<div class="container-contact100">
-		<div class="col-md-10">
+		<div class="col-md-6">
             <h3 id="message" class="text-warning"></h3>
 
             <div class="clearfix"></div>
@@ -45,13 +45,10 @@
                     {{ pendingBalance }}
                 </span>
 
-
-                <span>
-                    Send:
-                </span>
+                <span>Send to:</span>
 
                 <div class="row">
-                    <div class="col-md-8">
+                    <div class="col-md-7">
                         <div class="wrap-input100 validate-input" data-validate="Address is required">
                             <input class="input100" id="address" type="text" name="address" placeholder="Address" required>
                             <label class="label-input100" for="address">
@@ -67,7 +64,7 @@
                             </label>
                         </div>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <div class="container-contact100-form-btn" style="padding-top: 0px;!important">
                             <div class="wrap-contact100-form-btn">
                                 <div class="contact100-form-bgbtn"></div>
@@ -87,46 +84,46 @@
             </span>
 
             {% for item in transactions%}
-                <div class="col-md-9 wrap-input100">
+                <div class="col-md-12 wrap-input100">
                     <div class="row wrap-input100">
-                        <div class="col-md-1">
+                        <div class="col-md-2">
                             <span>From:</span>
                         </div>
-                        <div class="col-md-11">
+                        <div class="col-md-10">
                              {{ item.from }}
                         </div>
 
 
-                        <div class="col-md-1">
+                        <div class="col-md-2">
                             <span>To:</span>
                         </div>
-                        <div class="col-md-11">
+                        <div class="col-md-10">
                              {{ item.to }}
                         </div>
 
-                        <div class="col-md-1">
+                        <div class="col-md-2">
                             <span>Value:</span>
                         </div>
-                        <div class="col-md-11">
+                        <div class="col-md-10">
                              {{ item.value }}
                         </div>
-                        <div class="col-md-1">
+                        <div class="col-md-2">
                             <span>Timestamp:</span>
                         </div>
-                        <div class="col-md-11">
+                        <div class="col-md-10">
                             {{ item.timestamp|date('Y-m-d H:i:s') }} (  {{ item.timestamp }})
                         </div>
-                         <div class="col-md-1">
+                         <div class="col-md-2">
                             <span>Hash:</span>
                         </div>
-                        <div class="col-md-11">
+                        <div class="col-md-10">
                             {{ item.hash }}
                         </div>
 
-                        <div class="col-md-1">
+                        <div class="col-md-2">
                             <span>Block:</span>
                         </div>
-                        <div class="col-md-11">
+                        <div class="col-md-10">
                             {{ item.block }}
                         </div>
 

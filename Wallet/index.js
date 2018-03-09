@@ -3,7 +3,7 @@
 var CryptoJS    = require("crypto-js");
 var express     = require('express');
 var bodyParser  = require('body-parser');
-var swig        = require('swig');
+var twig        = require('twig');
 var path        = require('path');
 var fs          = require('fs');
 var ec          = require('elliptic').ec;
@@ -16,7 +16,7 @@ class Wallet {
     constructor(){
         this.httpPort           = process.env.HTTP_PORT || 9090;
         this.nodeURL            = process.env.NODE_URL || "http://localhost:3001";
-        this.privateKeyLocation = "/wallets/" + (process.env.PRIVATE_KEY_LOCATION || 'wallet');
+        this.privateKeyLocation = "wallets/" + (process.env.PRIVATE_KEY_LOCATION || 'wallet');
         this.isFaucetWallet     = process.env.FAUCET || false;
         this.walletBalanceCache = 0;
         this.initWallet();
@@ -28,15 +28,14 @@ Wallet.prototype.init = function(){
     var $this = this;
     var app   = express();
 
-    app.engine('swig', swig.renderFile);
-    app.set('view engine', 'swig');
+    twig.cache(false)
+    app.set('view engine', 'twig');
     app.set('views', path.join(__dirname, 'views'));
     app.set('view cache', false);
+    app.set("twig options", { strict_variables: false });
     app.use(express.static('public'))
     app.use(bodyParser.urlencoded({ extended: false }))// Value can be string or array
     app.use(bodyParser.json()); //Support JSON encoded body
-
-    swig.setDefaults({ cache: false });
 
     app.get('/', function(req, res){
         var uri = $this.nodeURL + '/balance/' + $this.getAddress();
