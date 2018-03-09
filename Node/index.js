@@ -166,10 +166,20 @@ Node.prototype.handleBlockchainResponse = function(message){
         } else {
             this.console('handleBlockchainResponse', "Received blockchain is longer than current blockchain");
 
-            //Verify block by length
-            if (this.isValidChain(receivedBlocks) && receivedBlocks.length > this.blockchain.length) {
-                this.console('handleBlockchainResponse', 'Received blockchain is valid. Replacing current blockchain with received blockchain');
-                this.blockchain = receivedBlocks;
+            //Verify block by Cumulative Difficulty
+            var cumulativeDifficultyReceived = this.isValidChain(receivedBlocks);
+            var cumulativeDifficultyLocal    = this.isValidChain(this.blockchain);
+
+            if (cumulativeDifficultyReceived.status) {
+                if(cumulativeDifficultyReceived.cumulDiff > cumulativeDifficultyLocal.cumulDiff){
+                    this.console('handleBlockchainResponse', 'Received blockchain is valid. Replacing current blockchain with received blockchain.');
+                    this.console('handleBlockchainResponse', 'Cumulative Difficulty: ' + cumulativeDifficultyReceived.cumulDiff);
+                    this.blockchain = receivedBlocks;
+                } else {
+                    this.console('handleBlockchainResponse', 'Received blockchain is valid BUT cumulative difficulty is less from local blockchain');
+                    this.console('handleBlockchainResponse', 'Cumulative Difficulty: ' + cumulativeDifficultyLocal.cumulDiff);
+                }
+
                 this.broadcast(this.responseLatestMsg());
             } else {
                 this.console('handleBlockchainResponse', 'Received blockchain invalid');
@@ -188,19 +198,20 @@ Node.prototype.handleBlockchainResponse = function(message){
  */
 Node.prototype.isValidChain = function(blockchainToValidate){
     if (JSON.stringify(blockchainToValidate[0]) !== JSON.stringify(this.getGenesisBlock())) {
-        return false;
+        return {"status" : false};
     }
 
-    var tempBlocks = [blockchainToValidate[0]];
+    var cumulativeDifficulty = 0;
 
     for (var i = 1; i < blockchainToValidate.length; i++) {
-        if (this.isValidNewBlock(blockchainToValidate[i], tempBlocks[i - 1])) {
-            tempBlocks.push(blockchainToValidate[i]);
+        if (this.isValidNewBlock(blockchainToValidate[i], blockchainToValidate[i - 1])) {
+            cumulativeDifficulty += blockchainToValidate[i].difficulty;
         } else {
-            return false;
+            return {"status" : false};
         }
     }
-    return true;
+
+    return {"status" : true, "cumulDiff" : cumulativeDifficulty};
 };
 
 /**
@@ -227,7 +238,7 @@ Node.prototype.isValidNewBlock = function(newBlock, previousBlock){
         this.console('isValidNewBlock', 'invalid previous hash');
         return false;
     } else if (newBlockHash !== newBlock.hash) {
-        this.console('isValidNewBlock', 'invalid hash: ' + newBlockHash + ' ' + newBlock.hash);
+        this.console('isValidNewBlock', 'invalid hash: ' + newBlockHash + ' ' + newBlock.hash + ' Block Index: ' + newBlock.index);
         return false;
     }
     return true;
@@ -257,7 +268,6 @@ Node.prototype.getMiningJob = function(address){
                 "index"         : response.index,
                 "transCounter"  : response.transCounter,
                 "difficulty"    : response.difficulty,
-                "prevBlockHash" : response.prevBlockHash,
                 "blockDataHash" : response.blockDataHash,
                 "reward"        : response.blockReward
             }
@@ -291,7 +301,7 @@ Node.prototype.getMiningJob = function(address){
     })
     this.pendingTransactions = this.pendingTransactions.filter(function(item){ return item.status == 'pending'});
 
-    var prevBlockHash = this.calculateHashForBlock(this.getLatestBlock());
+    var prevBlockHash = this.getLatestBlock().hash;
     var blockDataHash = this.calculateSHA256([newBlockIndex, prevBlockHash, now, jobTrans]);
 
     this.minersJobs[address] = {
@@ -301,7 +311,6 @@ Node.prototype.getMiningJob = function(address){
         "difficulty"    : this.difficulty,
         "oldDifficulty" : this.difficulty,
         "timestamp"     : now,
-        "prevBlockHash" : prevBlockHash,
         "blockDataHash" : blockDataHash,
         "reward"        : blockReward
     };
@@ -312,13 +321,11 @@ Node.prototype.getMiningJob = function(address){
             "index"         : newBlockIndex, //Index of new block that are mined right now
             "transCounter"  : this.pendingTransactions.length, //Will be used from miner how many trans process and when to want new
             "difficulty"    : this.difficulty,
-            "prevBlockHash" : prevBlockHash,
             "blockDataHash" : blockDataHash,
             "reward"        : blockReward
         }
     }
 }
-
 
 Node.prototype.submitBlock = function(nonce, newBlockHash, minnerAddr){
 
@@ -479,13 +486,6 @@ Node.prototype.getLatestBlock = function(){
     return this.blockchain[this.blockchain.length - 1];
 };
 
-/**
- * SHA256 hash of given block
- * @param block
- */
-Node.prototype.calculateHashForBlock = function(block){
-    return CryptoJS.SHA256(block.index + block.previousHash + block.timestamp, + JSON.stringify(block.transactions) ).toString();
-};
 
 Node.prototype.calculateSHA256 = function(object){
     return CryptoJS.SHA256(JSON.stringify(object).replace(/\s/g, "")).toString();
@@ -523,8 +523,6 @@ Node.prototype.getGenesisBlock = function(){
         69,
         0,
         this.genesisTimestamp,
-        "genesis",
-        "genesis",
     ]);
     var genesisTransactions = [{
         "from"  : "genesis",
@@ -539,17 +537,12 @@ Node.prototype.getGenesisBlock = function(){
         "status"    : "confirmed"
     }];
 
-    var hash = this.calculateHashForBlock({
-        "index"         : 0,
-        "previousHash"  : 0,
-        "timestamp"     : this.genesisTimestamp,
-        "transactions"  : JSON.stringify(genesisTransactions),
-        "nonce"         : 0
-    });
+    var blockDataHash = this.calculateSHA256([0, "genesis", this.genesisTimestamp, genesisTransactions]);
+    var hash          = this.calculateSHA256([blockDataHash, 0]);
 
     return {
         "index"         : 0, //Index of block
-        "previousHash"  : 0, //Previous Hash
+        "previousHash"  : "genesis", //Previous Hash
         "timestamp"     : this.genesisTimestamp, //Timestamp
         "transactions"  : genesisTransactions, //Transactions
         "hash"          : hash,
