@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Blockchain Explorer</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="images/icons/favicon.ico"/>
+    <link rel="stylesheet" type="text/css" href="vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="fonts/font-awesome-4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" type="text/css" href="fonts/Linearicons-Free-v1.0.0/icon-font.min.css">
+    <link rel="stylesheet" type="text/css" href="vendor/animate/animate.css">
+    <link rel="stylesheet" type="text/css" href="vendor/css-hamburgers/hamburgers.min.css">
+    <link rel="stylesheet" type="text/css" href="vendor/animsition/css/animsition.min.css">
+    <link rel="stylesheet" type="text/css" href="vendor/select2/select2.min.css">
+    <link rel="stylesheet" type="text/css" href="vendor/daterangepicker/daterangepicker.css">
+    <link rel="stylesheet" type="text/css" href="css/util.css">
+    <link rel="stylesheet" type="text/css" href="css/main.css">
+</head>
+<body>
+<div class="container-contact100">
+    <div class="col-md-10" id="dapp-main-conteiner">
+
+        <h3 id="metaMaskWaring" class="message"></h3>
+        <h3 id="message" class="message text-warning"></h3>
+
+        <h1 class="logo">Blockchain Explorer</h1>
+
+        <div class="clearfix"></div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="container-contact100-form-btn float-left menu">
+                    <div class="wrap-contact100-form-btn">
+                        <div class="contact100-form-bgbtn"></div>
+                        <button class="contact100-form-btn" onclick="location.href = '/pending';">
+                            Pending Txs
+                        </button>
+                    </div>
+                </div>
+
+                <div class="container-contact100-form-btn float-left menu">
+                    <div class="wrap-contact100-form-btn">
+                        <div class="contact100-form-bgbtn"></div>
+                        <button class="contact100-form-btn" onclick="location.href = '/view-accounts';">
+                            View Acc
+                        </button>
+                    </div>
+                </div>
+
+                <div class="container-contact100-form-btn float-left menu">
+                    <div class="wrap-contact100-form-btn">
+                        <div class="contact100-form-bgbtn"></div>
+                        <button class="contact100-form-btn" onclick="location.href = '/view-peers';">
+                            View Peers
+                        </button>
+                    </div>
+                </div>
+
+
+
+                <div class="container-contact100-form-btn float-right menu">
+                    <div class="container-contact100-form-btn" style="padding-top: 0px;!important">
+                        <div class="wrap-contact100-form-btn">
+                            <div class="contact100-form-bgbtn"></div>
+                            <button class="contact100-form-btn searchTxs">
+                                Search Txs
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="container-contact100-form-btn float-right menu">
+                    <div class="wrap-input100 validate-input" data-validate="Txs is required">
+                        <input class="input100" id="transaction-hash" type="text" name="transaction-hash" placeholder="Transaction hash" required>
+                        <label class="label-input100" for="price">
+                            <span class="lnr lnr-diamond"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <span>Blockchain:</span>
+
+        {% for item in blocksList %}
+            <div class="col-md-12 wrap-input100" >
+                <div class="row wrap-input100">
+                    <div class="col-md-1">
+                        <span>Index:</span>
+                    </div>
+                    <div class="col-md-11">
+                       {{  item.index }}
+                    </div>
+
+                    <div class="col-md-1">
+                        <span>Prev BlockHash:</span>
+                    </div>
+                    <div class="col-md-11">
+                        {{  item.previousHash }}
+                    </div>
+
+                    <div class="col-md-1">
+                        <span>Timestamp:</span>
+                    </div>
+                    <div class="col-md-11">
+                        {{ item.timestamp|date('Y-m-d H:i:s') }} (  {{ item.timestamp }})
+                    </div>
+
+                    <div class="col-md-1">
+                        <span>Transactions #:</span>
+                    </div>
+                    <div class="col-md-11">
+                        {{ item.transactions|length }}
+                    </div>
+
+                    <div class="col-md-1">
+                        <span>Block Hash:</span>
+                    </div>
+                    <div class="col-md-11">
+                        {{ item.hash }}
+                    </div>
+
+                    <div class="col-md-1">
+                        <span>Mined By:</span>
+                    </div>
+                    <div class="col-md-11">
+                        {{ item.mynedBy }}
+                    </div>
+
+                    <div class="col-md-1">
+                        <span>Difficulty</span>
+                    </div>
+                    <div class="col-md-11">
+                        {{ item.difficulty }}
+                    </div>
+
+                    <div class="col-md-1">
+                        <span>Nonce: </span>
+                    </div>
+                    <div class="col-md-11">
+                        {{ item.nonce }}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div id="dropDownSelect1"></div>
+<script src="vendor/jquery/jquery-3.2.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/jquery.validation/1.16.0/jquery.validate.min.js"></script>
+<script src="https://cdn.jsdelivr.net/jquery.validation/1.16.0/additional-methods.min.js"></script>
+<script src="vendor/animsition/js/animsition.min.js"></script>
+<script src="vendor/bootstrap/js/popper.js"></script>
+<script src="vendor/bootstrap/js/bootstrap.min.js"></script>
+<script src="vendor/select2/select2.min.js"></script>
+<script src="vendor/daterangepicker/moment.min.js"></script>
+<script src="vendor/daterangepicker/daterangepicker.js"></script>
+<script src="vendor/countdowntime/countdowntime.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

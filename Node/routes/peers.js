@@ -4,7 +4,7 @@ module.exports = function(app, Node) {
      */
     app.get('/peers', function(req, res){
         res.send(
-            Node.sockets.map(function(s) {s._socket.remoteAddress + ':' + s._socket.remotePort})
+            Node.sockets.map(function(s) { return s._socket.remoteAddress + ':' + s._socket.remotePort})
         );
     });
 

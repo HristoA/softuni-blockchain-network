@@ -1,0 +1,20 @@
+{
+  "name": "blockexplorer",
+  "version": "1.0.0",
+  "description": "Simple Blockchain Explorer for blockchain network",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "DEBUG=* node index.js"
+  },
+  "author": "HristoA",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.18.2",
+    "debug": "^3.1.0",
+    "express": "^4.16.2",
+    "path": "^0.12.7",
+    "request": "^2.83.0",
+    "twig": "^1.10.5"
+  }
+}
