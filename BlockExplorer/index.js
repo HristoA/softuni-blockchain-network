@@ -49,7 +49,22 @@ BlockchainExplorer.prototype.init = function(){
     });
 
     app.get('/pending', function(req, res){
+        var uri = $this.nodeURL + '/transactions/pending';
+        $this.console("VIEW_PEERS", "Get blocks from NODE: " + uri);
 
+        request({
+            "uri": uri,
+            "method": "GET",
+            "json": true
+        }, function(error, response, body) {
+
+            if (error) {
+                $this.console("PENDING", "Node return error: " + error)
+                return {};
+            }
+
+            res.render('pending', { "pendingList" : body });
+        });
     });
 
     app.get('/view-accounts', function(req, res){
@@ -72,6 +87,31 @@ BlockchainExplorer.prototype.init = function(){
             }
 
             res.render('view-peers', { "peersList" : body });
+        });
+    });
+
+    app.get('/transaction/:hash', function(req, res){
+
+        const txsHash = req.params['hash'];
+
+        var uri = $this.nodeURL + '/transaction/' + txsHash;
+        $this.console("TXS_HASH", "Get blocks from NODE: " + uri);
+
+        request({
+            "uri": uri,
+            "method": "GET",
+            "json": true
+        }, function(error, response, body) {
+
+            if (error) {
+                $this.console("TXS_HASH", "Node return error: " + error)
+                return {};
+            }
+
+            if(body.error != "undefined"){
+                body = {};
+            }
+            res.render('transaction', { "transaction" : body });
         });
     });
 

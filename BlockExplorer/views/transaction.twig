@@ -5,16 +5,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/png" href="images/icons/favicon.ico"/>
-    <link rel="stylesheet" type="text/css" href="vendor/bootstrap/css/bootstrap.min.css">
-    <link rel="stylesheet" type="text/css" href="fonts/font-awesome-4.7.0/css/font-awesome.min.css">
-    <link rel="stylesheet" type="text/css" href="fonts/Linearicons-Free-v1.0.0/icon-font.min.css">
-    <link rel="stylesheet" type="text/css" href="vendor/animate/animate.css">
-    <link rel="stylesheet" type="text/css" href="vendor/css-hamburgers/hamburgers.min.css">
-    <link rel="stylesheet" type="text/css" href="vendor/animsition/css/animsition.min.css">
-    <link rel="stylesheet" type="text/css" href="vendor/select2/select2.min.css">
-    <link rel="stylesheet" type="text/css" href="vendor/daterangepicker/daterangepicker.css">
-    <link rel="stylesheet" type="text/css" href="css/util.css">
-    <link rel="stylesheet" type="text/css" href="css/main.css">
+    <link rel="stylesheet" type="text/css" href="/vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="/fonts/font-awesome-4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" type="text/css" href="/fonts/Linearicons-Free-v1.0.0/icon-font.min.css">
+    <link rel="stylesheet" type="text/css" href="/vendor/animate/animate.css">
+    <link rel="stylesheet" type="text/css" href="/vendor/css-hamburgers/hamburgers.min.css">
+    <link rel="stylesheet" type="text/css" href="/vendor/animsition/css/animsition.min.css">
+    <link rel="stylesheet" type="text/css" href="/vendor/select2/select2.min.css">
+    <link rel="stylesheet" type="text/css" href="/vendor/daterangepicker/daterangepicker.css">
+    <link rel="stylesheet" type="text/css" href="/css/util.css">
+    <link rel="stylesheet" type="text/css" href="/css/main.css">
 </head>
 <body>
 <div class="container-contact100">
@@ -29,6 +29,14 @@
 
         <div class="row">
             <div class="col-md-12">
+                <div class="container-contact100-form-btn float-left menu">
+                    <div class="wrap-contact100-form-btn">
+                        <div class="contact100-form-bgbtn"></div>
+                        <button class="contact100-form-btn" onclick="location.href = '/';">
+                           Blockchain
+                        </button>
+                    </div>
+                </div>
                 <div class="container-contact100-form-btn float-left menu">
                     <div class="wrap-contact100-form-btn">
                         <div class="contact100-form-bgbtn"></div>
@@ -79,23 +87,37 @@
             </div>
         </div>
 
-        <span>Blockchain:</span>
+        <span>Transaction info:</span>
 
-        {% for item in blocksList %}
+        {% for item in transaction %}
             <div class="col-md-12 wrap-input100" >
                 <div class="row wrap-input100">
                     <div class="col-md-1">
-                        <span>Index:</span>
+                        <span>From:</span>
                     </div>
                     <div class="col-md-11">
-                       {{  item.index }}
+                       {{  item.from }}
                     </div>
 
                     <div class="col-md-1">
-                        <span>Prev BlockHash:</span>
+                        <span>To:</span>
                     </div>
                     <div class="col-md-11">
-                        {{  item.previousHash }}
+                        {{  item.to }}
+                    </div>
+
+                    <div class="col-md-1">
+                        <span>Value:</span>
+                    </div>
+                    <div class="col-md-11">
+                        {{  item.value }}
+                    </div>
+
+                    <div class="col-md-1">
+                        <span>Fee:</span>
+                    </div>
+                    <div class="col-md-11">
+                        {{  item.fee }}
                     </div>
 
                     <div class="col-md-1">
@@ -106,38 +128,31 @@
                     </div>
 
                     <div class="col-md-1">
-                        <span>Transactions #:</span>
+                        <span>PubKey:</span>
                     </div>
                     <div class="col-md-11">
-                        {{ item.transactions|length }}
+                        {{  item.pubKey }}
                     </div>
 
                     <div class="col-md-1">
-                        <span>Block Hash:</span>
+                        <span>Signature:</span>
                     </div>
                     <div class="col-md-11">
-                        {{ item.hash }}
+                        {{  item.signature }}
                     </div>
 
                     <div class="col-md-1">
-                        <span>Mined By:</span>
+                        <span>Hash:</span>
                     </div>
                     <div class="col-md-11">
-                        {{ item.mynedBy }}
+                        {{  item.hash }}
                     </div>
 
                     <div class="col-md-1">
-                        <span>Difficulty</span>
+                        <span>Block:</span>
                     </div>
                     <div class="col-md-11">
-                        {{ item.difficulty }}
-                    </div>
-
-                    <div class="col-md-1">
-                        <span>Nonce: </span>
-                    </div>
-                    <div class="col-md-11">
-                        {{ item.nonce }}
+                        {{  item.block }}
                     </div>
                 </div>
             </div>
@@ -146,16 +161,16 @@
 </div>
 
 <div id="dropDownSelect1"></div>
-<script src="vendor/jquery/jquery-3.2.1.min.js"></script>
+<script src="/vendor/jquery/jquery-3.2.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/jquery.validation/1.16.0/jquery.validate.min.js"></script>
 <script src="https://cdn.jsdelivr.net/jquery.validation/1.16.0/additional-methods.min.js"></script>
-<script src="vendor/animsition/js/animsition.min.js"></script>
-<script src="vendor/bootstrap/js/popper.js"></script>
-<script src="vendor/bootstrap/js/bootstrap.min.js"></script>
-<script src="vendor/select2/select2.min.js"></script>
-<script src="vendor/daterangepicker/moment.min.js"></script>
-<script src="vendor/daterangepicker/daterangepicker.js"></script>
-<script src="vendor/countdowntime/countdowntime.js"></script>
-<script src="js/main.js"></script>
+<script src="/vendor/animsition/js/animsition.min.js"></script>
+<script src="/vendor/bootstrap/js/popper.js"></script>
+<script src="/vendor/bootstrap/js/bootstrap.min.js"></script>
+<script src="/vendor/select2/select2.min.js"></script>
+<script src="/vendor/daterangepicker/moment.min.js"></script>
+<script src="/vendor/daterangepicker/daterangepicker.js"></script>
+<script src="/vendor/countdowntime/countdowntime.js"></script>
+<script src="/js/main.js"></script>
 </body>
 </html>
